@@ -1,26 +1,31 @@
 :root {
-    --brand-navy: #1e3a5f;
-    --brand-royal: #2b5ea8;
-    --brand-royal-light: #4a7cc9;
-    --ecotech-gold: #c4b07a;
-    --ecotech-gold-soft: #ebe6d6;
-    --accent-subtle: #eef2f9;
-    --bg: #f8f9fc;
+    /* EcoTech CRM palette — deeper green + orange, cleaned up */
+    --ecotech-green: #2f7a38;
+    --ecotech-green-deep: #24632c;
+    --ecotech-green-soft: #e9f4eb;
+    --ecotech-green-mid: #4a9a52;
+    --ecotech-orange: #e8912a;
+    --ecotech-orange-deep: #d4781a;
+    --ecotech-orange-soft: #fdf3e6;
+
+    --accent-subtle: var(--ecotech-green-soft);
+    --bg: #f4f6f4;
     --surface: #ffffff;
-    --border: #dce3ef;
-    --text: #1e293b;
-    --text-muted: #64748b;
-    /* Chat bubbles — same layout, blue-tinted user messages */
-    --user-bubble: #e8eef8;
+    --border: #d5ddd6;
+    --text: #1a1f1a;
+    --text-muted: #5c6b5e;
+    --user-bubble: #e9f4eb;
     --assistant-bubble: #ffffff;
-    --shadow: 0 2px 10px rgba(30, 58, 95, 0.06);
-    --radius: 12px;
+    --shadow: 0 1px 3px rgba(36, 99, 44, 0.06);
+    --radius: 3px;
     --font: "Segoe UI", system-ui, -apple-system, sans-serif;
 
-    /* Legacy aliases */
-    --ecotech-green: var(--brand-royal);
-    --ecotech-green-light: var(--brand-royal-light);
-    --ecotech-green-dark: var(--brand-navy);
+    /* Aliases used elsewhere */
+    --brand-navy: var(--ecotech-green-deep);
+    --brand-royal: var(--ecotech-green);
+    --brand-royal-light: var(--ecotech-green-mid);
+    --ecotech-gold: var(--ecotech-orange);
+    --ecotech-gold-soft: var(--ecotech-orange-soft);
 }
 
 *,
@@ -64,11 +69,10 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    padding: 1rem 1.25rem;
-    background: linear-gradient(180deg, #fcfdfe 0%, #f3f6fb 100%);
+    padding: 0.85rem 1.25rem;
+    background: var(--surface);
     color: var(--text);
     border-bottom: 1px solid var(--border);
-    box-shadow: 0 1px 3px rgba(30, 58, 95, 0.05);
     flex-shrink: 0;
 }
 
@@ -78,36 +82,34 @@ body {
     gap: 0.75rem;
 }
 
-.brand-mark {
-    width: 42px;
-    height: 42px;
-    border-radius: 10px;
-    background: #e8eef8;
-    color: var(--brand-navy);
-    border: 1px solid rgba(74, 124, 201, 0.25);
-    font-weight: 700;
-    font-size: 1.25rem;
-    display: grid;
-    place-items: center;
-}
-
 .tab-header h1 {
     margin: 0;
     font-size: 1.1rem;
     font-weight: 700;
     letter-spacing: 0.01em;
+    color: var(--ecotech-green-deep);
 }
 
 .subtitle {
     margin: 0.15rem 0 0;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--text-muted);
 }
 
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.55rem;
+}
+
+.auth-user {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 0.25rem;
 }
 
 .region-select {
@@ -122,10 +124,10 @@ body {
 
 .region-select select {
     padding: 0.4rem 0.6rem;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    background: rgba(255, 255, 255, 0.12);
-    color: #fff;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
     font-size: 0.85rem;
     min-width: 130px;
 }
@@ -134,45 +136,56 @@ body {
     color: var(--text);
 }
 
+/* CRM-style boxy solid buttons */
 .btn-primary,
-.btn-secondary {
+.btn-secondary,
+.btn-accent {
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius);
     cursor: pointer;
     font-family: inherit;
-    font-size: 0.9rem;
-    transition: background 0.15s, transform 0.1s;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: background 0.12s, border-color 0.12s;
+    letter-spacing: 0.01em;
 }
 
 .btn-primary {
-    background: linear-gradient(180deg, #d4c48e 0%, var(--ecotech-gold) 100%);
-    color: var(--brand-navy);
-    font-weight: 600;
-    padding: 0.65rem 1.1rem;
+    background: var(--ecotech-green);
+    color: #fff;
+    padding: 0.6rem 1.1rem;
     align-self: flex-end;
-    box-shadow: 0 1px 2px rgba(30, 58, 95, 0.1);
 }
 
 .btn-primary:hover:not(:disabled) {
-    filter: brightness(1.03);
-    box-shadow: 0 2px 4px rgba(30, 58, 95, 0.14);
+    background: var(--ecotech-green-deep);
 }
 
 .btn-primary:disabled {
-    opacity: 0.6;
+    opacity: 0.55;
     cursor: not-allowed;
+}
+
+.btn-accent {
+    background: var(--ecotech-orange);
+    color: #fff;
+    padding: 0.45rem 0.85rem;
+}
+
+.btn-accent:hover:not(:disabled) {
+    background: var(--ecotech-orange-deep);
 }
 
 .btn-secondary {
     background: var(--surface);
-    color: var(--brand-royal);
-    padding: 0.5rem 0.85rem;
+    color: var(--ecotech-green-deep);
+    padding: 0.45rem 0.85rem;
     border: 1px solid var(--border);
 }
 
 .btn-secondary:hover {
-    background: var(--accent-subtle);
-    border-color: #c5d4e8;
+    background: var(--ecotech-green-soft);
+    border-color: #b5d0b8;
 }
 
 .chat-layout {
@@ -214,7 +227,7 @@ body {
     display: flex;
     align-items: center;
     gap: 0.15rem;
-    border-radius: 8px;
+    border-radius: var(--radius);
     margin-bottom: 0.15rem;
 }
 
@@ -224,7 +237,8 @@ body {
 }
 
 .session-item.active .session-select {
-    color: var(--brand-navy);
+    color: var(--ecotech-green-deep);
+    font-weight: 600;
 }
 
 .session-select {
@@ -234,7 +248,7 @@ body {
     padding: 0.55rem 0.35rem 0.55rem 0.6rem;
     border: none;
     background: transparent;
-    border-radius: 8px;
+    border-radius: var(--radius);
     cursor: pointer;
     font-family: inherit;
     font-size: 0.82rem;
@@ -247,15 +261,17 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     margin-right: 0.25rem;
     padding: 0;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius);
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
     opacity: 0;
     transition: opacity 0.15s, color 0.15s, background 0.15s;
 }
@@ -339,7 +355,7 @@ body {
 .message.user {
     align-self: flex-end;
     background: var(--user-bubble);
-    border: 1px solid #c5d4e8;
+    border: 1px solid #b8d4bc;
 }
 
 .message .meta {
@@ -368,7 +384,7 @@ body {
 }
 
 .message.assistant code {
-    background: #eef2f8;
+    background: var(--ecotech-green-soft);
     padding: 0.1rem 0.35rem;
     border-radius: 4px;
     font-size: 0.85em;
@@ -397,7 +413,7 @@ body {
     font-size: clamp(1.75rem, 4vw, 2.35rem);
     font-weight: 600;
     letter-spacing: -0.02em;
-    color: var(--brand-navy);
+    color: var(--ecotech-green-deep);
     line-height: 1.2;
 }
 
@@ -422,17 +438,18 @@ body {
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--text);
-    border-radius: 999px;
-    padding: 0.55rem 0.95rem;
+    border-radius: var(--radius);
+    padding: 0.5rem 0.85rem;
     font: inherit;
     font-size: 0.82rem;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .welcome-chip:hover {
-    background: var(--accent-subtle);
-    border-color: #c5d4e8;
+    background: var(--ecotech-green-soft);
+    border-color: var(--ecotech-green-mid);
+    color: var(--ecotech-green-deep);
 }
 
 .messages:has(.welcome-hero) {
@@ -454,7 +471,7 @@ body {
     z-index: 10;
     background: var(--surface);
     border-top: 1px solid var(--border);
-    box-shadow: 0 -4px 12px rgba(30, 58, 95, 0.05);
+    box-shadow: 0 -4px 12px rgba(36, 99, 44, 0.05);
 }
 
 .composer {
@@ -462,15 +479,6 @@ body {
     gap: 0.65rem;
     padding: 0.85rem 1.25rem 1rem;
     background: var(--surface);
-}
-
-.auth-user {
-    font-size: 0.8rem;
-    opacity: 0.9;
-    max-width: 160px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .loading.hidden,
@@ -503,9 +511,9 @@ body {
     width: min(860px, 100%);
     max-height: min(88vh, 720px);
     background: var(--surface);
-    border-radius: 14px;
+    border-radius: 4px;
     border: 1px solid var(--border);
-    box-shadow: 0 20px 50px rgba(30, 58, 95, 0.18);
+    box-shadow: 0 12px 40px rgba(28, 28, 28, 0.16);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -524,7 +532,7 @@ body {
 .modal-header h2 {
     margin: 0;
     font-size: 1.1rem;
-    color: var(--brand-navy);
+    color: var(--ecotech-green-deep);
 }
 
 .modal-sub {
@@ -543,7 +551,7 @@ body {
     color: var(--text-muted);
     cursor: pointer;
     padding: 0.15rem 0.4rem;
-    border-radius: 6px;
+    border-radius: var(--radius);
 }
 
 .modal-close:hover {
@@ -572,9 +580,9 @@ body {
 }
 
 .settings-tab.active {
-    color: var(--brand-navy);
+    color: var(--ecotech-green-deep);
     font-weight: 600;
-    border-bottom-color: var(--brand-royal);
+    border-bottom-color: var(--ecotech-green);
 }
 
 .modal-body {
@@ -631,14 +639,14 @@ body {
     color: var(--text);
     padding: 0.55rem 0.7rem;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: var(--radius);
     background: var(--surface);
 }
 
 .name-fields input:focus {
-    outline: 2px solid rgba(74, 124, 201, 0.3);
+    outline: 2px solid rgba(47, 122, 56, 0.28);
     outline-offset: 1px;
-    border-color: #a8bdd9;
+    border-color: var(--ecotech-green-mid);
 }
 
 .profile-footer {
@@ -673,7 +681,7 @@ body {
     gap: 0.65rem;
     padding: 0.55rem 0.65rem;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: var(--radius);
     margin-bottom: 0.35rem;
     background: #fafbfd;
 }
@@ -700,7 +708,7 @@ body {
 
 .endpoint-row input[type="checkbox"] {
     margin-top: 0.2rem;
-    accent-color: var(--brand-royal);
+    accent-color: var(--ecotech-green);
 }
 
 .endpoint-row.readonly {
@@ -712,9 +720,9 @@ body {
     font-size: 0.68rem;
     font-weight: 600;
     padding: 0.15rem 0.45rem;
-    border-radius: 999px;
-    background: #e8f0e4;
-    color: #2f5d3a;
+    border-radius: 4px;
+    background: var(--ecotech-green-soft);
+    color: var(--ecotech-green-deep);
 }
 
 .endpoint-row .ep-badge.off {
@@ -749,7 +757,7 @@ body {
     text-align: left;
     border: 1px solid transparent;
     background: transparent;
-    border-radius: 8px;
+    border-radius: var(--radius);
     padding: 0.55rem 0.65rem;
     cursor: pointer;
     font: inherit;
@@ -762,7 +770,7 @@ body {
 
 .user-list-item.active {
     background: var(--accent-subtle);
-    border-color: #c5d4e8;
+    border-color: #b5d0b8;
 }
 
 .user-list-item .u-name {
@@ -801,7 +809,7 @@ body {
 .btn-text {
     border: none;
     background: transparent;
-    color: var(--brand-royal);
+    color: var(--ecotech-green);
     font: inherit;
     font-size: 0.78rem;
     cursor: pointer;
@@ -855,7 +863,7 @@ body {
 .auth-card h2 {
     margin: 0 0 0.35rem;
     font-size: 1.15rem;
-    color: var(--brand-royal);
+    color: var(--ecotech-green);
 }
 
 .auth-card p {
@@ -878,7 +886,7 @@ body {
     margin-top: 0.3rem;
     padding: 0.6rem 0.75rem;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: var(--radius);
     font: inherit;
 }
 
@@ -907,7 +915,7 @@ body {
     width: 18px;
     height: 18px;
     border: 2px solid var(--border);
-    border-top-color: var(--brand-royal-light);
+    border-top-color: var(--ecotech-green);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
 }
@@ -929,9 +937,9 @@ body {
 }
 
 .composer textarea:focus {
-    outline: 2px solid rgba(74, 124, 201, 0.3);
+    outline: 2px solid rgba(47, 122, 56, 0.28);
     outline-offset: 1px;
-    border-color: #a8bdd9;
+    border-color: var(--ecotech-green-mid);
 }
 
 @media (max-width: 768px) {

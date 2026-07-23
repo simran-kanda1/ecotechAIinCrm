@@ -85,7 +85,7 @@ function showWelcome() {
     messagesEl.innerHTML = `
         <div class="welcome-hero">
             <h2>Hey, ${escapeHtml(name)}</h2>
-            <p>Ask about leads, appointments, follow-ups, sales performance, or door knockers — I’ll pull live CRM data only.</p>
+            <p>Ask about leads, appointments, follow-ups, sales performance, or door knockers</p>
             <div class="welcome-suggestions">
                 ${SUGGESTIONS.map((s) => `<button type="button" class="welcome-chip" data-prompt="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}
             </div>
@@ -335,7 +335,7 @@ async function loadSessionList() {
             deleteBtn.type = 'button';
             deleteBtn.className = 'session-delete';
             deleteBtn.setAttribute('aria-label', 'Delete conversation');
-            deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>`;
+            deleteBtn.textContent = '×';
             deleteBtn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 deleteBtn.disabled = true;

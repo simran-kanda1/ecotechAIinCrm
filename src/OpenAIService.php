@@ -57,8 +57,26 @@ final class OpenAIService
 
             return is_array($decoded) ? $decoded : ['error' => 'Invalid OpenAI response'];
         } catch (GuzzleException $e) {
-            return ['error' => $e->getMessage()];
+            return ['error' => $this->formatHttpError($e)];
         }
+    }
+
+    private function formatHttpError(GuzzleException $e): string
+    {
+        if ($e instanceof \GuzzleHttp\Exception\RequestException && $e->hasResponse()) {
+            $body = (string) $e->getResponse()->getBody();
+            $decoded = json_decode($body, true);
+            $msg = $decoded['error']['message'] ?? null;
+            if (is_string($msg) && $msg !== '') {
+                return $msg;
+            }
+            $status = $e->getResponse()->getStatusCode();
+            if ($status === 401) {
+                return 'Invalid OpenAI API key. Check OPENAI_API_KEY in .env';
+            }
+        }
+
+        return $e->getMessage();
     }
 
     public function generateSessionTitle(string $firstMessage): string

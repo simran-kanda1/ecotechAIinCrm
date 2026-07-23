@@ -45,9 +45,9 @@ $isFirstMessage = !empty($body['isFirstMessage']);
 $openaiKey = Config::get('OPENAI_API_KEY');
 $crmBase = Config::get('CRM_API_BASE_URL');
 
-if (!$openaiKey) {
+if (!$openaiKey || preg_match('/^your[-_]/i', $openaiKey)) {
     http_response_code(500);
-    echo json_encode(['error' => 'OpenAI API key not configured']);
+    echo json_encode(['error' => 'OpenAI API key not configured. Set OPENAI_API_KEY in .env']);
     exit;
 }
 
@@ -61,9 +61,14 @@ $clientId = Config::get('CRM_CLIENT_ID');
 $crmUser = Config::get('CRM_USERNAME');
 $crmPass = Config::get('CRM_PASSWORD');
 
-if (!$clientId || !$crmUser || !$crmPass) {
+if (
+    !$clientId || !$crmUser || !$crmPass
+    || preg_match('/^your[-_]/i', $clientId)
+    || preg_match('/^your[-_]/i', $crmUser)
+    || preg_match('/^your[-_]/i', $crmPass)
+) {
     http_response_code(500);
-    echo json_encode(['error' => 'CRM credentials not configured (CRM_CLIENT_ID, CRM_USERNAME, CRM_PASSWORD)']);
+    echo json_encode(['error' => 'CRM credentials not configured. Set CRM_CLIENT_ID, CRM_USERNAME, and CRM_PASSWORD in .env']);
     exit;
 }
 

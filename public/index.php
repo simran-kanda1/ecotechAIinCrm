@@ -24,15 +24,13 @@ $appName = 'Ecotech CRM Assistant';
     <div class="crm-tab-shell">
         <header class="tab-header">
             <div class="brand">
-                <div class="brand-mark" aria-hidden="true">E</div>
                 <div>
-                    <h1>Ecotech Windows &amp; Doors</h1>
-                    <p class="subtitle">CRM AI Assistant</p>
+                    <h1>AI Assistant</h1>
                 </div>
             </div>
             <div class="header-actions">
                 <span id="header-user" class="auth-user" hidden></span>
-                <button type="button" id="settings-btn" class="btn-secondary" title="Configure data access">Configure</button>
+                <button type="button" id="settings-btn" class="btn-accent" title="Configure data access">Configure</button>
                 <button type="button" id="new-chat-btn" class="btn-secondary" title="Start new conversation">New chat</button>
             </div>
         </header>

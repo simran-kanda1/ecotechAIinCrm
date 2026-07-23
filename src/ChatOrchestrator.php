@@ -98,8 +98,9 @@ PROMPT;
             $response = $this->openai->chat($messages, $tools, $systemPrompt);
 
             if (isset($response['error'])) {
+                $detail = is_string($response['error']) ? $response['error'] : 'Unknown error';
                 return [
-                    'reply' => 'Sorry, I could not reach the AI service. Please try again.',
+                    'reply' => 'Sorry, I could not reach the AI service. ' . $detail,
                     'tool_calls' => $toolLog,
                     'error' => $response['error'],
                 ];
