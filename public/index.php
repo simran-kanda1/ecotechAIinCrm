@@ -7,18 +7,17 @@ require_once dirname(__DIR__) . '/vendor/autoload.php';
 use Ecotech\Chat\Config;
 
 Config::load();
-
-$appName = 'Ecotech CRM Assistant';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($appName) ?></title>
+    <title>AI Assistant</title>
     <link rel="stylesheet" href="assets/css/chat.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <div class="crm-tab-shell">
@@ -73,7 +72,7 @@ $appName = 'Ecotech CRM Assistant';
             <header class="modal-header">
                 <div>
                     <h2 id="settings-title">Configure access</h2>
-                    <p class="modal-sub">CRM users endpoint is still in progress — showing preview data. Chat currently has full access for everyone.</p>
+                    <p class="modal-sub">Assign which datapoints each CRM user can access.</p>
                 </div>
                 <button type="button" class="modal-close" data-close-settings aria-label="Close">&times;</button>
             </header>
@@ -110,6 +109,7 @@ $appName = 'Ecotech CRM Assistant';
                     <div class="manage-layout">
                         <aside class="user-picker">
                             <h3>CRM users</h3>
+                            <input type="search" id="user-search" class="user-search" placeholder="Search users…" autocomplete="off">
                             <ul id="user-list" class="user-list"></ul>
                         </aside>
                         <div class="user-endpoints">

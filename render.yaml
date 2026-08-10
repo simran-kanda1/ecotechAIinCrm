@@ -1,0 +1,30 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Create the service from this file (Dashboard → New → Blueprint)
+# or connect the GitHub repo and use these settings manually.
+
+services:
+  - type: web
+    name: ecotech-ai-crm
+    runtime: docker
+    plan: starter
+    region: oregon
+    healthCheckPath: /
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: CRM_API_BASE_URL
+        value: https://api.ecotechcrm.ca/Api
+      - key: CRM_CLIENT_ID
+        sync: false
+      - key: CRM_USERNAME
+        sync: false
+      - key: CRM_PASSWORD
+        sync: false
+      - key: CRM_API_TIMEOUT
+        value: "60"
+      - key: OPENAI_TIMEOUT
+        value: "120"
+      - key: APP_DEBUG
+        value: "false"

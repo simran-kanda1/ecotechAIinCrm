@@ -116,19 +116,120 @@ final class CrmClient
         ?int $year = null,
     ): array {
         $now = $this->nowToronto();
-
-        return $this->get('GetSalespersonPerformance', $this->query([
+        $result = $this->get('GetSalespersonPerformance', $this->query([
             'region' => $region,
             'salesperson' => $salesperson,
             'month' => $month ?? (int) $now->format('n'),
             'year' => $year ?? (int) $now->format('Y'),
         ]));
+
+        return $this->normalizePerformanceResult($result);
+    }
+
+    /**
+     * Performance API often returns { "YYZ": [ ...reps ] }. Flatten for the model
+     * and annotate how many salespeople must appear in full reports.
+     *
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
+     */
+    private function normalizePerformanceResult(array $result): array
+    {
+        if (!empty($result['error'])) {
+            return $result;
+        }
+
+        $data = $result['data'] ?? null;
+        if (!is_array($data)) {
+            return $result;
+        }
+
+        if (array_is_list($data)) {
+            $result['meta'] = array_merge(
+                is_array($result['meta'] ?? null) ? $result['meta'] : [],
+                [
+                    'salesperson_count' => count($data),
+                    'note' => 'Include ALL ' . count($data) . ' salespeople in any report/table unless the user asked for a subset (e.g. top 5).',
+                ],
+            );
+
+            return $result;
+        }
+
+        $flat = [];
+        foreach ($data as $reg => $rows) {
+            if (!is_array($rows)) {
+                continue;
+            }
+            foreach ($rows as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                if (!isset($row['region'])) {
+                    $row['region'] = (string) $reg;
+                }
+                $flat[] = $row;
+            }
+        }
+
+        $result['data'] = $flat;
+        $result['meta'] = array_merge(
+            is_array($result['meta'] ?? null) ? $result['meta'] : [],
+            [
+                'salesperson_count' => count($flat),
+                'regions_in_response' => array_keys($data),
+                'note' => 'Flattened performance by region. Include ALL ' . count($flat) . ' salespeople in reports/tables unless the user asked for a subset.',
+            ],
+        );
+
+        return $result;
     }
 
     /** @param array<string, mixed> $filters */
     public function getLeads(array $filters): array
     {
-        return $this->get('GetLeads', $this->query($filters));
+        $filters = $this->ensureLeadDateRange($filters);
+        $result = $this->get('GetLeads', $this->query($filters));
+        if (!empty($filters['_note']) && is_array($result) && empty($result['error'])) {
+            $result['meta'] = array_merge(
+                is_array($result['meta'] ?? null) ? $result['meta'] : [],
+                ['note' => (string) $filters['_note']],
+            );
+        }
+
+        return $result;
+    }
+
+    /**
+     * Default to last 30 days unless the user asked for all-time / supplied dates.
+     *
+     * @param array<string, mixed> $filters
+     * @return array<string, mixed>
+     */
+    private function ensureLeadDateRange(array $filters): array
+    {
+        $allTime = filter_var($filters['all_time'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        if ($allTime) {
+            unset($filters['added_start_date'], $filters['added_end_date'], $filters['booking_date']);
+            $filters['_note'] = 'All-time request: no date filter applied. Large result sets are aggregated for the assistant.';
+
+            return $filters;
+        }
+
+        $hasRange = !empty($filters['added_start_date'])
+            || !empty($filters['added_end_date'])
+            || !empty($filters['booking_date']);
+
+        if ($hasRange) {
+            return $filters;
+        }
+
+        $now = $this->nowToronto();
+        $filters['added_end_date'] = $now->format('Y-m-d 23:59:59');
+        $filters['added_start_date'] = $now->modify('-30 days')->format('Y-m-d 00:00:00');
+        $filters['_note'] = 'No time range was provided, so this used the last 30 days. Ask the user for a specific range, or all-time if they need the full history.';
+
+        return $filters;
     }
 
     /** @param array<string, mixed> $filters */
@@ -197,6 +298,60 @@ final class CrmClient
         return $this->get('GetCanvassingPerformance', $this->query($filters));
     }
 
+    public function getEntityUrl(string $entity, string $entityId, ?string $region = null): array
+    {
+        return $this->get('GetEntityUrl', $this->query([
+            'entity' => strtolower($entity),
+            'entity_id' => $entityId,
+            'region' => $region ?: 'YYZ',
+        ]));
+    }
+
+    /**
+     * Resolve several CRM deep-links in one tool call.
+     *
+     * @param list<array{entity?: string, entity_id?: string, region?: string}> $items
+     * @return array<string, mixed>
+     */
+    public function resolveEntityLinks(array $items): array
+    {
+        $out = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $entity = (string) ($item['entity'] ?? '');
+            $id = (string) ($item['entity_id'] ?? '');
+            if ($entity === '' || $id === '') {
+                continue;
+            }
+            $region = isset($item['region']) && $item['region'] !== '' ? (string) $item['region'] : 'YYZ';
+            $result = $this->getEntityUrl($entity, $id, $region);
+            $url = $result['data']['url'] ?? $result['url'] ?? null;
+            $out[] = [
+                'entity' => strtolower($entity),
+                'entity_id' => $id,
+                'region' => $region,
+                'url' => is_string($url) ? $url : null,
+                'error' => ($result['error'] ?? false) ? ($result['message'] ?? 'failed') : null,
+            ];
+        }
+
+        return ['data' => $out];
+    }
+
+    /** @param array<string, mixed> $filters */
+    public function getRoles(array $filters = []): array
+    {
+        return $this->get('GetRoles', $this->query($filters));
+    }
+
+    /** @param array<string, mixed> $filters */
+    public function getUsers(array $filters = []): array
+    {
+        return $this->get('GetUsers', $this->query($filters));
+    }
+
     public function callEndpoint(string $endpoint, array $params): array
     {
         return match ($endpoint) {
@@ -245,6 +400,16 @@ final class CrmClient
             'getCanvassingClients' => $this->getCanvassingClients($this->flattenFilters($params)),
             'getCanvassingBonus' => $this->getCanvassingBonus($this->flattenFilters($params)),
             'getCanvassingPerformance' => $this->getCanvassingPerformance($this->flattenFilters($params)),
+            'getEntityUrl' => $this->getEntityUrl(
+                (string) ($params['entity'] ?? ''),
+                (string) ($params['entity_id'] ?? ''),
+                $params['region'] ?? null,
+            ),
+            'resolveEntityLinks' => $this->resolveEntityLinks(
+                is_array($params['items'] ?? null) ? $params['items'] : [],
+            ),
+            'getRoles' => $this->getRoles($this->flattenFilters($params)),
+            'getUsers' => $this->getUsers($this->flattenFilters($params)),
             default => ['error' => true, 'message' => "Unknown endpoint: {$endpoint}"],
         };
     }
@@ -284,6 +449,7 @@ final class CrmClient
 
     /**
      * Drop null/empty values; coerce booleans to API-friendly strings.
+     * Internal keys starting with _ are not sent to the CRM API.
      *
      * @param array<string, mixed> $params
      * @return array<string, scalar>
@@ -292,6 +458,13 @@ final class CrmClient
     {
         $out = [];
         foreach ($params as $key => $value) {
+            if (str_starts_with((string) $key, '_')) {
+                continue;
+            }
+            // Client-only flags — never send to CRM.
+            if (in_array((string) $key, ['all_time', 'filters'], true)) {
+                continue;
+            }
             if ($value === null || $value === '') {
                 continue;
             }
@@ -361,20 +534,96 @@ final class CrmClient
     /** @return array<string, mixed> */
     private function decodeBody(string $raw): array
     {
+        $bytes = strlen($raw);
+        // Large CRM dumps (all-time leads, etc.) need more headroom, then we aggregate.
+        if ($bytes > 1_500_000) {
+            $previous = ini_get('memory_limit');
+            @ini_set('memory_limit', '512M');
+        }
+
         $decoded = json_decode($raw, true);
-        if (is_array($decoded)) {
-            if (!empty($decoded['error'])) {
+        if (isset($previous)) {
+            @ini_set('memory_limit', (string) $previous);
+        }
+
+        if (!is_array($decoded)) {
+            if ($bytes > 2_000_000) {
                 return [
                     'error' => true,
-                    'message' => is_string($decoded['error']) ? $decoded['error'] : 'CRM error',
-                    'data' => $decoded,
+                    'message' => 'CRM returned a very large payload that could not be parsed. Try a shorter time range, or ask again for all-time charts (aggregates only).',
+                    'bytes' => $bytes,
                 ];
             }
 
+            return ['raw' => $raw];
+        }
+
+        if (!empty($decoded['error'])) {
+            return [
+                'error' => true,
+                'message' => is_string($decoded['error']) ? $decoded['error'] : 'CRM error',
+                'data' => $decoded,
+            ];
+        }
+
+        return $this->shrinkForAi($decoded, $bytes);
+    }
+
+    /**
+     * Keep tool payloads workable for the model. Full row lists are sampled;
+     * status_counts (and similar) cover the entire result for charts / all-time.
+     *
+     * @param array<string, mixed> $decoded
+     * @return array<string, mixed>
+     */
+    private function shrinkForAi(array $decoded, int $bytes = 0): array
+    {
+        if (!isset($decoded['data']) || !is_array($decoded['data']) || !array_is_list($decoded['data'])) {
             return $decoded;
         }
 
-        return ['raw' => $raw];
+        $rows = $decoded['data'];
+        $total = count($rows);
+        $statusCounts = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $status = $row['status'] ?? null;
+            if ($status === null || $status === '') {
+                continue;
+            }
+            $key = (string) $status;
+            $statusCounts[$key] = ($statusCounts[$key] ?? 0) + 1;
+        }
+
+        // For huge all-time pulls, only return aggregates + a tiny sample.
+        $aggregateOnly = $total > 250 || $bytes > 1_500_000;
+        $max = $aggregateOnly ? 15 : 80;
+
+        $meta = is_array($decoded['meta'] ?? null) ? $decoded['meta'] : [];
+        $meta['total_count'] = $total;
+        if ($statusCounts !== []) {
+            $meta['status_counts'] = $statusCounts;
+        }
+
+        if ($total > $max) {
+            $decoded['data'] = array_slice($rows, 0, $max);
+            $meta['truncated'] = true;
+            $meta['returned'] = $max;
+            $meta['aggregate_only'] = $aggregateOnly;
+            $meta['note'] = ($meta['note'] ?? '')
+                . ($aggregateOnly
+                    ? ' Large result: showing a small sample of rows. Use meta.status_counts / total_count for charts and totals (covers the full set).'
+                    : ' Rows truncated for the assistant. Use meta.status_counts for charts/summaries when present.');
+            $meta['note'] = trim((string) $meta['note']);
+        }
+
+        $decoded['meta'] = $meta;
+        // Free the full list ASAP when we sliced.
+        unset($rows);
+
+        return $decoded;
     }
 
     /** @return array<string, mixed> */

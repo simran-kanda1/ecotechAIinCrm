@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Report</title>
+    <style>
+        :root {
+            --ecotech-green: #2f7a38;
+            --ecotech-green-deep: #24632c;
+            --ecotech-green-soft: #e9f4eb;
+            --ecotech-green-mid: #4a9a52;
+            --ecotech-orange: #e8912a;
+            --ecotech-orange-deep: #d4781a;
+            --border: #d5ddd6;
+            --text: #1a1f1a;
+            --muted: #5c6b5e;
+            --bg: #f4f6f4;
+            --surface: #ffffff;
+            --radius: 3px;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", system-ui, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+        }
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0.75rem 1.25rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+        .toolbar-brand {
+            margin-right: auto;
+            font-weight: 700;
+            color: var(--ecotech-green-deep);
+            font-size: 0.95rem;
+        }
+        .toolbar button {
+            border: none;
+            border-radius: var(--radius);
+            padding: 0.5rem 0.9rem;
+            font: inherit;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-print {
+            background: var(--ecotech-green);
+            color: #fff;
+        }
+        .btn-print:hover { background: var(--ecotech-green-deep); }
+        .btn-close {
+            background: var(--surface);
+            border: 1px solid var(--border) !important;
+            color: var(--ecotech-green-deep);
+        }
+        .btn-close:hover { background: var(--ecotech-green-soft); }
+        .sheet {
+            max-width: 900px;
+            margin: 1.25rem auto 2rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem 2.25rem;
+        }
+        .sheet-accent {
+            height: 4px;
+            background: var(--ecotech-orange);
+            margin: -2rem -2.25rem 1.5rem;
+            border-radius: var(--radius) var(--radius) 0 0;
+        }
+        h1 {
+            margin: 0 0 0.35rem;
+            color: var(--ecotech-green-deep);
+            font-size: 1.6rem;
+        }
+        .subtitle { margin: 0; color: var(--muted); }
+        .meta {
+            margin: 0.75rem 0 1.5rem;
+            font-size: 0.85rem;
+            color: var(--muted);
+            padding-bottom: 0.85rem;
+            border-bottom: 1px solid var(--border);
+        }
+        h2 {
+            margin: 1.5rem 0 0.6rem;
+            font-size: 1.05rem;
+            color: var(--ecotech-green-deep);
+            border-bottom: 2px solid var(--ecotech-green-soft);
+            padding-bottom: 0.35rem;
+        }
+        p { line-height: 1.5; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            margin: 0.5rem 0 1rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 0.45rem 0.55rem;
+            text-align: left;
+        }
+        th {
+            background: var(--ecotech-green-soft);
+            color: var(--ecotech-green-deep);
+            font-weight: 600;
+        }
+        tr:nth-child(even) td { background: #fafcfb; }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin: 0.75rem 0 1rem;
+        }
+        .metric {
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--ecotech-green);
+            padding: 0.75rem;
+            background: var(--ecotech-green-soft);
+            border-radius: var(--radius);
+        }
+        .metric:nth-child(2n) {
+            border-left-color: var(--ecotech-orange);
+            background: #fdf6eb;
+        }
+        .metric .label {
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .metric .value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-top: 0.25rem;
+            color: var(--ecotech-green-deep);
+        }
+        ul { margin: 0.4rem 0 1rem; padding-left: 1.2rem; }
+        .error {
+            padding: 2rem;
+            text-align: center;
+            color: #8a3b3b;
+            background: #fff;
+            border: 1px solid var(--border);
+            max-width: 520px;
+            margin: 3rem auto;
+        }
+        @media print {
+            .toolbar { display: none; }
+            body { background: #fff; }
+            .sheet {
+                border: none;
+                margin: 0;
+                max-width: none;
+                padding: 0;
+            }
+            .sheet-accent { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <div class="toolbar-brand">AI Assistant Report</div>
+        <button type="button" class="btn-close" id="close-btn">Close</button>
+        <button type="button" class="btn-print" id="print-btn">Print / Save as PDF</button>
+    </div>
+    <main id="report-root" class="sheet"></main>
+    <script src="assets/js/report.js"></script>
+</body>
+</html>

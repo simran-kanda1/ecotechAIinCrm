@@ -26,6 +26,7 @@ import {
     updateUserName,
     displayName,
     isSuperAdmin,
+    fetchCrmUsers,
 } from './access-config.js';
 
 const app = initializeApp(firebaseConfig);
@@ -50,8 +51,11 @@ const SUGGESTIONS = [
     'Who has appointments tomorrow?',
     'How did sales perform this month?',
     'Follow-ups due in YYZ',
-    'Door knocker performance this month',
+    'Pie chart of lead statuses in YYZ',
 ];
+
+const ARTIFACT_MARKER = '<!--ecotech-artifacts:';
+const CHART_COLORS = ['#2f7a38', '#e8912a', '#4a9a52', '#d4781a', '#1a5c24', '#f0b35a', '#7ab87f', '#8a5a20'];
 
 let browserId = localStorage.getItem(BROWSER_KEY);
 if (!browserId) {
@@ -100,9 +104,49 @@ function showWelcome() {
     });
 }
 
+function packArtifactsIntoContent(reply, artifacts) {
+    if (!artifacts || ((!artifacts.charts || !artifacts.charts.length) && (!artifacts.reports || !artifacts.reports.length))) {
+        return reply;
+    }
+    return `${reply}\n\n${ARTIFACT_MARKER}${JSON.stringify(artifacts)}-->`;
+}
+
+function unpackContent(content) {
+    const idx = content.indexOf(ARTIFACT_MARKER);
+    if (idx === -1) {
+        return { text: content, artifacts: null };
+    }
+    const jsonStart = idx + ARTIFACT_MARKER.length;
+    const jsonEnd = content.indexOf('-->', jsonStart);
+    if (jsonEnd === -1) {
+        return { text: content, artifacts: null };
+    }
+    let artifacts = null;
+    try {
+        artifacts = JSON.parse(content.slice(jsonStart, jsonEnd));
+    } catch {
+        artifacts = null;
+    }
+    return {
+        text: content.slice(0, idx).trimEnd(),
+        artifacts,
+    };
+}
+
 function renderMarkdown(text) {
     const raw = marked.parse(text || '', { breaks: true });
-    return DOMPurify.sanitize(raw);
+    const clean = DOMPurify.sanitize(raw, {
+        ADD_ATTR: ['target', 'rel'],
+        FORBID_TAGS: ['img'],
+    });
+    const wrap = document.createElement('div');
+    wrap.innerHTML = clean;
+    wrap.querySelectorAll('a[href]').forEach((a) => {
+        a.setAttribute('target', '_blank');
+        a.setAttribute('rel', 'noopener noreferrer');
+        a.classList.add('crm-link');
+    });
+    return wrap.innerHTML;
 }
 
 function scrollToBottom() {
@@ -111,12 +155,116 @@ function scrollToBottom() {
     }
 }
 
+function openReport(report) {
+    const id = report.id || ('report_' + crypto.randomUUID());
+    const payload = { ...report, id };
+    localStorage.setItem('ecotech_report_' + id, JSON.stringify(payload));
+    // Prune older cached reports (keep last 10)
+    try {
+        const keys = Object.keys(localStorage).filter((k) => k.startsWith('ecotech_report_'));
+        if (keys.length > 10) {
+            keys.sort();
+            keys.slice(0, keys.length - 10).forEach((k) => localStorage.removeItem(k));
+        }
+    } catch {
+        // ignore quota errors
+    }
+    window.open('/report.html?id=' + encodeURIComponent(id), '_blank', 'noopener,noreferrer');
+}
+
+function mountCharts(container, charts) {
+    if (!charts?.length || typeof Chart === 'undefined') return;
+    charts.forEach((chart) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'chart-card';
+        if (chart.title) {
+            const h = document.createElement('div');
+            h.className = 'chart-title';
+            h.textContent = chart.title;
+            wrap.appendChild(h);
+        }
+        const canvas = document.createElement('canvas');
+        wrap.appendChild(canvas);
+        container.appendChild(wrap);
+
+        const datasets = (chart.datasets || []).map((ds, i) => ({
+            label: ds.label || '',
+            data: ds.data || [],
+            backgroundColor: chart.type === 'line'
+                ? CHART_COLORS[i % CHART_COLORS.length]
+                : (ds.data || []).map((_, j) => CHART_COLORS[j % CHART_COLORS.length]),
+            borderColor: CHART_COLORS[i % CHART_COLORS.length],
+            borderWidth: chart.type === 'line' ? 2 : 1,
+            fill: chart.type === 'line' ? false : undefined,
+            tension: chart.type === 'line' ? 0.25 : undefined,
+        }));
+
+        // eslint-disable-next-line no-new
+        new Chart(canvas, {
+            type: chart.type || 'bar',
+            data: {
+                labels: chart.labels || [],
+                datasets,
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: chart.type === 'pie' || (chart.datasets || []).length > 1 },
+                },
+            },
+        });
+    });
+}
+
+function mountReports(container, reports) {
+    if (!reports?.length) return;
+    reports.forEach((report) => {
+        const bar = document.createElement('div');
+        bar.className = 'report-actions';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-accent';
+        btn.textContent = `Open report: ${report.title || 'PDF'}`;
+        btn.addEventListener('click', () => openReport(report));
+        bar.appendChild(btn);
+        container.appendChild(bar);
+    });
+}
+
 function appendMessage(role, content, meta = '') {
     const div = document.createElement('div');
     div.className = `message ${role}`;
-    div.innerHTML = `
-        <div class="meta">${meta || (role === 'user' ? 'You' : 'Assistant')}</div>
-        <div class="body">${role === 'assistant' ? renderMarkdown(content) : escapeHtml(content)}</div>`;
+
+    if (role === 'assistant') {
+        const { text, artifacts } = unpackContent(content);
+        const body = document.createElement('div');
+        body.className = 'body';
+        body.innerHTML = renderMarkdown(text);
+        // When a report artifact exists, drop misleading "open report" markdown links
+        // (models sometimes invent CRM URLs for these).
+        if (artifacts?.reports?.length) {
+            body.querySelectorAll('a.crm-link').forEach((a) => {
+                const label = (a.textContent || '').toLowerCase();
+                if (label.includes('open') && label.includes('report')) {
+                    const span = document.createElement('span');
+                    span.textContent = a.textContent || '';
+                    a.replaceWith(span);
+                }
+            });
+        }
+        div.innerHTML = `<div class="meta">${meta || 'Assistant'}</div>`;
+        div.appendChild(body);
+        if (artifacts) {
+            mountCharts(body, artifacts.charts || []);
+            mountReports(body, artifacts.reports || []);
+        }
+    } else {
+        div.innerHTML = `
+            <div class="meta">${meta || 'You'}</div>
+            <div class="body">${escapeHtml(content)}</div>`;
+    }
+
     messagesEl.appendChild(div);
     scrollToBottom();
     return div;
@@ -220,7 +368,8 @@ function subscribeToSession(sessionId) {
             const meta = ts ? ts.toLocaleString() : (role === 'user' ? 'You' : 'Assistant');
             appendMessage(role, content, meta);
             if (role === 'user' || role === 'assistant') {
-                localHistory.push({ role, content });
+                const { text } = role === 'assistant' ? unpackContent(content) : { text: content };
+                localHistory.push({ role, content: text });
             }
         });
         scrollToBottom();
@@ -379,7 +528,17 @@ async function sendMessage(text) {
             }),
         });
 
-        const data = await res.json();
+        const raw = await res.text();
+        let data;
+        try {
+            data = JSON.parse(raw);
+        } catch {
+            throw new Error(
+                res.ok
+                    ? 'Server returned an invalid response. Try narrowing the date range.'
+                    : `Request failed (${res.status}). Try again with a smaller date range.`,
+            );
+        }
 
         if (!res.ok) {
             throw new Error(data.error || 'Request failed');
@@ -391,7 +550,13 @@ async function sendMessage(text) {
             await setSessionTitle(text.length > 60 ? text.slice(0, 57) + '…' : text);
         }
 
-        await saveMessage('assistant', data.reply);
+        const packed = packArtifactsIntoContent(data.reply, data.artifacts);
+        await saveMessage('assistant', packed);
+
+        if (data.artifacts?.reports?.length) {
+            // Open the newest report in a tab for print/download
+            openReport(data.artifacts.reports[data.artifacts.reports.length - 1]);
+        }
     } catch (err) {
         const msg = `Sorry, something went wrong: ${err.message}`;
         await saveMessage('assistant', msg);
@@ -510,6 +675,9 @@ function openSettings() {
     markAclDirty(false);
     fillMyProfileFields();
 
+    const search = /** @type {HTMLInputElement|null} */ (document.getElementById('user-search'));
+    if (search) search.value = '';
+
     document.getElementById('my-access-name').textContent = displayName(CURRENT_USER);
     const myAccess = acl[CURRENT_USER.id] || ALL_ENDPOINT_IDS;
     renderEndpointGroups(document.getElementById('my-access-list'), myAccess, { editable: false });
@@ -535,6 +703,33 @@ function openSettings() {
     switchSettingsTab('my-access');
     settingsModal.hidden = false;
     document.body.style.overflow = 'hidden';
+
+    fetchCrmUsers()
+        .then(() => {
+            headerUserEl.textContent = displayName(CURRENT_USER);
+            document.getElementById('my-access-name').textContent = displayName(CURRENT_USER);
+            fillMyProfileFields();
+            if (isSuperAdmin()) {
+                document.getElementById('manage-users-tab').hidden = false;
+                if (!selectedManageUserId || !DUMMY_USERS.find((u) => u.id === selectedManageUserId)) {
+                    selectedManageUserId = DUMMY_USERS.find((u) => u.id !== CURRENT_USER.id)?.id || DUMMY_USERS[0]?.id;
+                }
+                renderUserList();
+                const user = DUMMY_USERS.find((u) => u.id === selectedManageUserId);
+                if (user) {
+                    draftEndpoints = new Set(acl[user.id] || ALL_ENDPOINT_IDS);
+                    document.getElementById('selected-user-label').textContent = displayName(user);
+                    document.getElementById('endpoint-bulk').hidden = false;
+                    document.getElementById('acl-footer').hidden = false;
+                    fillManageProfileFields(user);
+                    renderEndpointGroups(document.getElementById('user-endpoint-list'), [...draftEndpoints], { editable: true });
+                }
+            }
+            refreshIdentityUi();
+        })
+        .catch((err) => {
+            console.warn('CRM users unavailable, using local list', err);
+        });
 }
 
 function closeSettings() {
@@ -558,18 +753,49 @@ function switchSettingsTab(tabId) {
     document.getElementById('tab-manage-users').hidden = tabId !== 'manage-users';
 }
 
-function renderUserList() {
+function getUserSearchQuery() {
+    const search = /** @type {HTMLInputElement|null} */ (document.getElementById('user-search'));
+    return search?.value || '';
+}
+
+function renderUserList(filterText = getUserSearchQuery()) {
     const list = document.getElementById('user-list');
     list.innerHTML = '';
 
-    DUMMY_USERS.forEach((user) => {
+    const q = filterText.trim().toLowerCase();
+    const users = DUMMY_USERS.filter((user) => {
+        if (!q) return true;
+        const hay = [
+            user.first_name,
+            user.last_name,
+            displayName(user),
+            user.email || '',
+            ...(user.role_names || []),
+            user.id,
+        ].join(' ').toLowerCase();
+        return hay.includes(q);
+    });
+
+    if (users.length === 0) {
+        const empty = document.createElement('li');
+        empty.className = 'user-list-empty';
+        empty.textContent = q ? 'No users match that search.' : 'No users found.';
+        list.appendChild(empty);
+        return;
+    }
+
+    users.forEach((user) => {
         const li = document.createElement('li');
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'user-list-item' + (user.id === selectedManageUserId ? ' active' : '');
         btn.innerHTML = `
             <span class="u-name">${escapeHtml(displayName(user))}</span>
-            <span class="u-meta">${escapeHtml(user.role === 'super_admin' ? 'Super admin' : 'User')} · ${escapeHtml(user.email)}</span>`;
+            <span class="u-meta">${escapeHtml(
+                (user.role_names && user.role_names.length)
+                    ? user.role_names.join(', ')
+                    : (user.role === 'super_admin' ? 'Super admin' : 'User')
+            )}${user.email ? ` · ${escapeHtml(user.email)}` : ''}</span>`;
         btn.addEventListener('click', () => {
             if (aclDirty && !confirm('Discard unsaved changes for this user?')) return;
             selectManageUser(user.id);
@@ -593,7 +819,8 @@ function selectManageUser(userId) {
     fillManageProfileFields(user);
 
     renderEndpointGroups(document.getElementById('user-endpoint-list'), [...draftEndpoints], { editable: true });
-    renderUserList();
+    const search = /** @type {HTMLInputElement|null} */ (document.getElementById('user-search'));
+    renderUserList(search?.value || '');
     switchSettingsTab('manage-users');
 }
 
@@ -673,6 +900,11 @@ function setupSettingsUi() {
     document.getElementById('manage-first-name')?.addEventListener('input', () => markAclDirty(true));
     document.getElementById('manage-last-name')?.addEventListener('input', () => markAclDirty(true));
 
+    document.getElementById('user-search')?.addEventListener('input', (e) => {
+        const target = /** @type {HTMLInputElement} */ (e.target);
+        renderUserList(target.value);
+    });
+
     document.getElementById('select-all-endpoints')?.addEventListener('click', () => {
         if (!draftEndpoints) return;
         draftEndpoints = new Set(ALL_ENDPOINT_IDS);
@@ -698,6 +930,14 @@ function setupSettingsUi() {
 
 async function initChat() {
     setupSettingsUi();
+
+    try {
+        await fetchCrmUsers();
+        headerUserEl.textContent = displayName(CURRENT_USER);
+        refreshIdentityUi();
+    } catch (err) {
+        console.warn('CRM users unavailable', err);
+    }
 
     if (currentSessionId) {
         const sessionRef = doc(db, COLLECTIONS.sessions, currentSessionId);

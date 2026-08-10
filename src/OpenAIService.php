@@ -18,10 +18,11 @@ final class OpenAIService
     public function __construct(
         private readonly string $apiKey,
         private readonly string $model = 'gpt-4o-mini',
+        int $timeout = 120,
     ) {
         $this->http = new Client([
             'base_uri' => 'https://api.openai.com/v1/',
-            'timeout' => 60,
+            'timeout' => max(30, $timeout),
             'headers' => [
                 'Authorization' => 'Bearer ' . $this->apiKey,
                 'Content-Type' => 'application/json',
@@ -102,6 +103,9 @@ final class OpenAIService
             if ($title === '') {
                 return $this->fallbackTitle($firstMessage);
             }
+
+            $title = preg_replace('/!\[[^\]]*\]\([^)]*\)/', '', $title) ?? $title;
+            $title = trim(preg_replace('/\s+/', ' ', $title) ?? $title);
 
             return mb_strlen($title) > 60 ? mb_substr($title, 0, 57) . '…' : $title;
         } catch (GuzzleException) {
@@ -195,12 +199,13 @@ final class OpenAIService
             ),
             self::tool(
                 'getLeads',
-                'GET leads by region with optional filters: date range, booking date, status, salesperson, city, source, quote amount, comments, name. Statuses: ' . self::LEAD_STATUSES . '.',
+                'GET leads by region. Pass a date range when possible (added_start_date / added_end_date). If omitted, last 30 days is used and noted in meta.note. For full history set all_time=true (no date filters). Large results return meta.status_counts + total_count for charts. Statuses: ' . self::LEAD_STATUSES . '.',
                 [
                     'region' => ['type' => 'string', 'description' => 'Required region code'],
                     'added_start_date' => ['type' => 'string', 'description' => "YYYY-MM-DD HH:mm:ss; cannot be future"],
                     'added_end_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD HH:mm:ss; >= added_start_date'],
                     'booking_date' => ['type' => 'string', 'description' => 'YYYY-MM-DD or YYYY-MM-DD HH:mm:ss'],
+                    'all_time' => ['type' => 'boolean', 'description' => 'If true, do not apply date filters (full history). Prefer for all-time charts using meta.status_counts.'],
                     'status' => ['type' => 'string', 'description' => self::LEAD_STATUSES],
                     'salesperson' => ['type' => 'string', 'description' => 'Numeric salesperson ID'],
                     'city' => ['type' => 'string'],
@@ -309,6 +314,97 @@ final class OpenAIService
                 'GET aggregate + per-canvasser door-knocking metrics (doors knocked, CRM conversion, sales) for a region/date range.',
                 $dateRange,
                 ['region', 'start_date', 'end_date'],
+            ),
+            self::tool(
+                'getEntityUrl',
+                'GET a CRM deep-link URL for one opportunity, lead, client, or service so the user can open it in the CRM.',
+                [
+                    'entity' => ['type' => 'string', 'description' => "opportunity | lead | client | service"],
+                    'entity_id' => ['type' => 'string', 'description' => 'Numeric entity ID'],
+                    'region' => ['type' => 'string', 'description' => 'Optional, defaults YYZ'],
+                ],
+                ['entity', 'entity_id'],
+            ),
+            self::tool(
+                'resolveEntityLinks',
+                'Batch-resolve CRM deep-link URLs for many entities. Prefer this when building tables so each row can link into the CRM.',
+                [
+                    'items' => [
+                        'type' => 'array',
+                        'description' => 'Up to ~25 items',
+                        'items' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'entity' => ['type' => 'string'],
+                                'entity_id' => ['type' => 'string'],
+                                'region' => ['type' => 'string'],
+                            ],
+                        ],
+                    ],
+                ],
+                ['items'],
+            ),
+            self::tool(
+                'getRoles',
+                'GET CRM roles. Optional role id filters to one role.',
+                [
+                    'role' => ['type' => 'string', 'description' => 'Optional numeric role ID'],
+                ],
+                [],
+            ),
+            self::tool(
+                'getUsers',
+                'GET CRM users (active by default). Optional user id or role id filters.',
+                [
+                    'user' => ['type' => 'string', 'description' => 'Optional numeric user ID'],
+                    'role' => ['type' => 'string', 'description' => 'Optional numeric role ID'],
+                    'active' => ['type' => 'boolean', 'description' => 'Defaults true'],
+                ],
+                [],
+            ),
+            self::tool(
+                'createChart',
+                'Create a pie, bar, or line chart from CRM numbers you already fetched. Use after aggregating tool results. The UI renders the chart in chat.',
+                [
+                    'type' => ['type' => 'string', 'description' => 'bar | pie | line'],
+                    'title' => ['type' => 'string'],
+                    'labels' => ['type' => 'array', 'items' => ['type' => 'string']],
+                    'datasets' => [
+                        'type' => 'array',
+                        'items' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'label' => ['type' => 'string'],
+                                'data' => ['type' => 'array', 'items' => ['type' => 'number']],
+                            ],
+                        ],
+                    ],
+                ],
+                ['type', 'labels', 'datasets'],
+            ),
+            self::tool(
+                'createReport',
+                'Create a printable PDF-style report. Ask for sections/fields and time range if missing, fetch CRM data, then call this. For salesperson performance include EVERY salesperson from the tool data in table rows (not a sample of 5). The UI opens the report in a new tab.',
+                [
+                    'title' => ['type' => 'string'],
+                    'subtitle' => ['type' => 'string'],
+                    'sections' => [
+                        'type' => 'array',
+                        'description' => 'Sections: text|table|metrics|list. Tables must include the full row set from source data.',
+                        'items' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'heading' => ['type' => 'string'],
+                                'type' => ['type' => 'string'],
+                                'content' => ['type' => 'string', 'description' => 'For text sections'],
+                                'columns' => ['type' => 'array', 'items' => ['type' => 'string']],
+                                'rows' => ['type' => 'array', 'items' => ['type' => 'array'], 'description' => 'Full rows — do not truncate salesperson lists'],
+                                'items' => ['type' => 'array', 'description' => 'For list or metrics [{label, value}]'],
+                            ],
+                        ],
+                    ],
+                ],
+                ['title', 'sections'],
             ),
         ];
     }

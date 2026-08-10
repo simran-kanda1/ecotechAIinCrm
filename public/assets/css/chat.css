@@ -383,11 +383,39 @@ body {
     font-weight: 600;
 }
 
-.message.assistant code {
-    background: var(--ecotech-green-soft);
-    padding: 0.1rem 0.35rem;
-    border-radius: 4px;
-    font-size: 0.85em;
+.message.assistant a.crm-link {
+    color: var(--ecotech-green-deep);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.message.assistant a.crm-link:hover {
+    color: var(--ecotech-orange-deep);
+}
+
+.chart-card {
+    margin: 0.85rem 0 0.35rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fafcfb;
+    max-width: 520px;
+}
+
+.chart-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ecotech-green-deep);
+    margin-bottom: 0.5rem;
+}
+
+.report-actions {
+    margin-top: 0.75rem;
+}
+
+.report-actions .btn-accent {
+    font-size: 0.85rem;
 }
 
 .message.assistant ul,
@@ -746,10 +774,30 @@ body {
     color: var(--text-muted);
 }
 
+.user-search {
+    width: 100%;
+    margin-bottom: 0.55rem;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font: inherit;
+    font-size: 0.85rem;
+    background: var(--surface);
+    color: var(--text);
+}
+
+.user-search:focus {
+    outline: 2px solid rgba(47, 122, 56, 0.28);
+    outline-offset: 1px;
+    border-color: var(--ecotech-green-mid);
+}
+
 .user-list {
     list-style: none;
     margin: 0;
     padding: 0;
+    max-height: 420px;
+    overflow-y: auto;
 }
 
 .user-list-item {
@@ -773,11 +821,10 @@ body {
     border-color: #b5d0b8;
 }
 
-.user-list-item .u-name {
-    display: block;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text);
+.user-list-empty {
+    padding: 0.65rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
 }
 
 .user-list-item .u-meta {

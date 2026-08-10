@@ -10,6 +10,11 @@ use Ecotech\Chat\CrmAuth;
 use Ecotech\Chat\CrmClient;
 use Ecotech\Chat\OpenAIService;
 
+ini_set('memory_limit', '512M');
+ini_set('max_execution_time', '300');
+set_time_limit(300);
+ignore_user_abort(true);
+
 Config::load();
 
 header('Content-Type: application/json');
@@ -72,9 +77,14 @@ if (
     exit;
 }
 
-$timeout = (int) (Config::get('CRM_API_TIMEOUT', '30') ?? 30);
+$timeout = (int) (Config::get('CRM_API_TIMEOUT', '60') ?? 60);
+$openaiTimeout = (int) (Config::get('OPENAI_TIMEOUT', '120') ?? 120);
 $auth = new CrmAuth($crmBase, $clientId, $crmUser, $crmPass, $timeout);
-$openai = new OpenAIService($openaiKey, Config::get('OPENAI_MODEL', 'gpt-4o-mini') ?? 'gpt-4o-mini');
+$openai = new OpenAIService(
+    $openaiKey,
+    Config::get('OPENAI_MODEL', 'gpt-4o-mini') ?? 'gpt-4o-mini',
+    $openaiTimeout,
+);
 $crm = new CrmClient($crmBase, $auth, $clientId, $timeout);
 
 $sessionTitle = null;
@@ -90,6 +100,10 @@ $response = [
     'sessionId' => $sessionId,
     'timestamp' => gmdate('c'),
 ];
+
+if (!empty($result['artifacts'])) {
+    $response['artifacts'] = $result['artifacts'];
+}
 
 if ($sessionTitle !== null && $sessionTitle !== '') {
     $response['sessionTitle'] = $sessionTitle;
