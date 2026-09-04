@@ -1,6 +1,3 @@
-# Render Blueprint — https://render.com/docs/blueprint-spec
-# Create the service from this file (Dashboard → New → Blueprint)
-# or connect the GitHub repo and use these settings manually.
 
 services:
   - type: web

@@ -1,7 +1,4 @@
-/**
- * Shared CRM tool catalog for settings UI + access control preview.
- * Keep in sync with ChatOrchestrator::APPROVED_ENDPOINTS.
- */
+
 
 /** @typedef {{ id: string, first_name: string, last_name: string, email?: string, role: 'super_admin'|'user', roles?: string[], role_names?: string[], active?: boolean }} AppUser */
 
@@ -16,7 +13,6 @@ const SEED_USERS = [
     },
 ];
 
-/** Preview identity until CRM login is wired up. */
 const DEFAULT_USER_NAME = { first_name: 'Mark', last_name: 'Ginzburg' };
 
 const CURRENT_USER_KEY = 'ecotech_current_user_id';
@@ -64,7 +60,6 @@ export let DUMMY_USERS = applyNameOverrides(SEED_USERS.map((u) => ({ ...u })));
 export let CURRENT_USER = DUMMY_USERS[0];
 
 function pickCurrentUser(users) {
-    // Until CRM session login is connected, always preview as Mark Ginzburg.
     const mark = findDefaultUser(users);
     if (mark) {
         return { ...mark, role: 'super_admin' };

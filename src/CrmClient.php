@@ -14,8 +14,6 @@ use GuzzleHttp\Exception\GuzzleException;
  * Ecotech CRM API — https://api.ecotechcrm.ca/Api
  * @see API docs: GET for reads, POST JSON for writes, snake_case response keys.
  *
- * Each endpoint is a separate method so access can later be gated per user
- * (super-admin ACL). Today every endpoint is exposed to the chat tools.
  */
 final class CrmClient
 {

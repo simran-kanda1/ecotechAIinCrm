@@ -66,7 +66,7 @@ PROMPT;
 
     /**
      * All CRM tools are auto-enabled for every user today.
-     * Later: replace with per-user ACL from super-admin config.
+     * Later: replace with per-user super-admin config
      *
      * @var list<string>
      */

@@ -1,5 +1,4 @@
 :root {
-    /* EcoTech CRM palette — deeper green + orange, cleaned up */
     --ecotech-green: #2f7a38;
     --ecotech-green-deep: #24632c;
     --ecotech-green-soft: #e9f4eb;
@@ -20,7 +19,6 @@
     --radius: 3px;
     --font: "Segoe UI", system-ui, -apple-system, sans-serif;
 
-    /* Aliases used elsewhere */
     --brand-navy: var(--ecotech-green-deep);
     --brand-royal: var(--ecotech-green);
     --brand-royal-light: var(--ecotech-green-mid);
@@ -136,7 +134,6 @@ body {
     color: var(--text);
 }
 
-/* CRM-style boxy solid buttons */
 .btn-primary,
 .btn-secondary,
 .btn-accent {
@@ -514,7 +511,6 @@ body {
     display: none !important;
 }
 
-/* Settings modal */
 .modal[hidden] {
     display: none !important;
 }

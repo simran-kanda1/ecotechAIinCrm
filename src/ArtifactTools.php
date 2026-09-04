@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Ecotech\Chat;
 
-/**
- * Local (non-CRM) tools for charts and printable PDF reports.
- */
 final class ArtifactTools
 {
     /**

@@ -159,7 +159,6 @@ function openReport(report) {
     const id = report.id || ('report_' + crypto.randomUUID());
     const payload = { ...report, id };
     localStorage.setItem('ecotech_report_' + id, JSON.stringify(payload));
-    // Prune older cached reports (keep last 10)
     try {
         const keys = Object.keys(localStorage).filter((k) => k.startsWith('ecotech_report_'));
         if (keys.length > 10) {
@@ -167,7 +166,6 @@ function openReport(report) {
             keys.slice(0, keys.length - 10).forEach((k) => localStorage.removeItem(k));
         }
     } catch {
-        // ignore quota errors
     }
     window.open('/report.html?id=' + encodeURIComponent(id), '_blank', 'noopener,noreferrer');
 }
@@ -199,7 +197,6 @@ function mountCharts(container, charts) {
             tension: chart.type === 'line' ? 0.25 : undefined,
         }));
 
-        // eslint-disable-next-line no-new
         new Chart(canvas, {
             type: chart.type || 'bar',
             data: {
@@ -241,8 +238,6 @@ function appendMessage(role, content, meta = '') {
         const body = document.createElement('div');
         body.className = 'body';
         body.innerHTML = renderMarkdown(text);
-        // When a report artifact exists, drop misleading "open report" markdown links
-        // (models sometimes invent CRM URLs for these).
         if (artifacts?.reports?.length) {
             body.querySelectorAll('a.crm-link').forEach((a) => {
                 const label = (a.textContent || '').toLowerCase();
@@ -554,7 +549,6 @@ async function sendMessage(text) {
         await saveMessage('assistant', packed);
 
         if (data.artifacts?.reports?.length) {
-            // Open the newest report in a tab for print/download
             openReport(data.artifacts.reports[data.artifacts.reports.length - 1]);
         }
     } catch (err) {
@@ -565,8 +559,6 @@ async function sendMessage(text) {
         loadSessionList();
     }
 }
-
-/* ——— Settings / ACL (dummy users until CRM users endpoint ships) ——— */
 
 function endpointsByGroup() {
     /** @type {Record<string, typeof ENDPOINT_CATALOG>} */
